@@ -5,4 +5,4 @@ mf_analyzer
 Android Media Framework has numerous vulnerabilities mostly due to the complexitiy of the third part programs which handles the variety of  media formats.
 This analyzer helps detecting vulnerabilities as well as triaging the vulnerabilities, by identifying the possibility of external control from malicious users.
 
-Written by HJ
+Code--Written by HJ
