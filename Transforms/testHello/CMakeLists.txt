@@ -5,7 +5,7 @@ if( NOT LLVM_REQUIRES_RTTI )
 endif()
 
 
-add_llvm_loadable_module( LLVMTestHello
+add_llvm_library( LLVMTestHello  MODULE BUILDTREE_ONLY
   testHello.cpp
 
   PLUGIN_TOOL

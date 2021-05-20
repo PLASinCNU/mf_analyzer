@@ -10,7 +10,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_loadable_module( LLVMtestModule
+add_llvm_library( LLVMtestModule  MODULE BUILDTREE_ONLY
   testModule.cpp
 
   PLUGIN_TOOL

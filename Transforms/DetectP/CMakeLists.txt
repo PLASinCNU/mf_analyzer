@@ -10,7 +10,7 @@ if(WIN32 OR CYGWIN)
   set(LLVM_LINK_COMPONENTS Core Support)
 endif()
 
-add_llvm_loadable_module( LLVMDetectP
+add_llvm_library( LLVMDetectP  MODULE BUILDTREE_ONLY
   DetectP.cpp
 
   PLUGIN_TOOL

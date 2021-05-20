@@ -5,7 +5,7 @@ if( NOT LLVM_REQUIRES_RTTI )
 endif()
 
 
-add_llvm_loadable_module( LLVMCoffee
+add_llvm_library( LLVMCoffee  MODULE BUILDTREE_ONLY
   Coffee.cpp
 
   PLUGIN_TOOL

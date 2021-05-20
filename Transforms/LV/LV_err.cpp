@@ -130,7 +130,7 @@ namespace {
 		private: set<BasicBlock*> * getSuccessors(BasicBlock *bb) {
 			set<BasicBlock *> * succs = new set<BasicBlock*>();
 
-			TerminatorInst * term_inst = bb->getTerminator();
+			Instruction * term_inst = bb->getTerminator();
 			for (int i = 0; i < term_inst->getNumSuccessors(); i++) 
 				succs->insert(term_inst->getSuccessor(i));
 

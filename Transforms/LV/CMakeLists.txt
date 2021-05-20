@@ -5,7 +5,7 @@ if( NOT LLVM_REQUIRES_RTTI )
 endif()
 
 
-add_llvm_loadable_module( LLVMClv
+add_llvm_library( LLVMClv  MODULE BUILDTREE_ONLY
   LV.cpp
 
   PLUGIN_TOOL
