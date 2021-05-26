@@ -579,7 +579,20 @@ namespace{
 					runOnBasicBlock(temp);
 			}
 			eval_AllINOUT(f);
+			errs() << "\n\nTEST : Function Name is ====> " << f.getName() << "\n\n";
+
+
+			errs() << "******* Backward Taing Analysis Result *******\n";
+			int bb_count = 0;
+			for (Function::iterator bb = f.begin(); bb != f.end(); bb_count++,bb++) {
+					BasicBlock &temp = *bb;
+					printUSEDEF(bb_count, dyn_cast<BasicBlock>(bb)); // optional
+					//printINOUT(bb_count, &temp);
+			}
+
 			printTable(btd_table);
+			errs() << "\n\n";
+			errs() << "*********       end of the result       *********\n";
 		}
 
 		bool runOnBasicBlock(BasicBlock& b){
@@ -675,6 +688,12 @@ namespace{
 								string calledFunctionName = cl->getCalledFunction()->getName();
 								errs() << "\n\n Check Called Function : " << cl->getCalledFunction()->getName() << "\n\n";
 								errs() << "ADDRESS : " << &bbInst << "\n";
+								for(int i = 0 ; i < cl->arg_size() ; i++){
+									Value* arg = cl->getArgOperand(i);
+									if( Constant* c_arg = dyn_cast<Constant>(arg)) continue;
+									if( arg->getName() == "") continue;
+									bbUSE.insert(pair<Instruction*, string>(&bbInst, arg->getName()));
+								}
 						}
 
 						errs() << "check DEF \n";
@@ -690,12 +709,31 @@ namespace{
 						string tempGetName =bbInst.getOperand(0)->getName();
 						errs() << "\nis Nuyll???  : " << tempGetName << "\n\n";
 
+						if(LoadInst* li = dyn_cast<LoadInst>(&bbInst)){
+							if (li->getName() =="") li->setName(li->getOperand(0)->getName()+".temp");
+							pair<Instruction *,string> src (&bbInst, li->getOperand(0)->getName());
+							pair<Instruction *,string> dst (&bbInst, li->getName());
+
+							if(is_inDEF(bb, li->getOperand(0)->getName())){ // if  (<P,  src>  in  DEF(X))  for  some  P
+									btd_table.insert(
+										pair<pair<Instruction *, string>, Instruction *>
+										(pair<Instruction *, string>
+											(&bbInst, li->getOperand(0)->getName()),
+											getPC_inDEF(bb, li->getOperand(0)->getName())));
+//                    g_table.insert(<BasicBlock*, pair<Instruction *, string>>(bb, pair<Instruction *, string(&bbInst, src_val))); // add here 19.03.29
+							}
+
+							bbUSE.insert(src);
+							bbDEF.insert(dst);
+							continue ;
+						}
 
 						//Add Here Rete 2019.04.17 - Null string Pass
 						if(is_destOprd(&bbInst, 1)){
 								errs() << "Storrrreeee!  : "<< bbInst.getOperand(1)->getName() << "\n" ;
 								tempGetName = bbInst.getOperand(1)->getName();
 						}
+
 
 						pair<Instruction *,string> dest(&bbInst, tempGetName);
 
@@ -704,7 +742,6 @@ namespace{
 
 						for (int i_oprd = 0; i_oprd < numOperands; i_oprd++) {
 								if (is_ignorableOprd(&bbInst, i_oprd)) break;
-
 
 								string src_val = bbInst.getOperand(i_oprd)->getName();
 								if(src_val == "") break;
@@ -720,11 +757,6 @@ namespace{
 //                    g_table.insert(<BasicBlock*, pair<Instruction *, string>>(bb, pair<Instruction *, string(&bbInst, src_val))); // add here 19.03.29
 								}
 
-								//Add Here 2019.04.17
-//                errs() << "\n hhhhhhheeeeelllllooo \n";
-//                printTable(btd_table);
-//                errs() << "\n Ennnnnnddddd \n";
-
 								if (is_destOprd(&bbInst, i_oprd))
 										dest = src;
 
@@ -735,7 +767,10 @@ namespace{
 						if(is_inDEF(bb, dest.second) && getPC_inDEF(bb, dest.second) != &bbInst){
 								bbDEF.erase(make_pair(getPC_inDEF(bb, dest.second), dest.second));
 						}
-						bbDEF.insert(dest);     // DEF(X)  +=  <current_pc,  dest>
+						if(isa<StoreInst>(bbInst)) continue;
+						if(bbInst.getType()->isVoidTy() ) continue;
+						if(bbInst.getName() == "") bbInst.setName(string(bbInst.getOpcodeName())+".temp");
+						bbDEF.insert(pair<Instruction*, string>(&bbInst, bbInst.getName()));     // DEF(X)  +=  <current_pc,  dest>
 				}
 		}
 
@@ -911,14 +946,15 @@ namespace{
 		//Add Here 2019.04.17
 		private : string outputAnaly(string val, unsigned defLine){
 				if(val.find("addr") != std::string::npos){
-						return "RUI";
+						return "MUI";
 				}
 				else if(!findTable(defLine)){
 						return "NO";
 				}
-				else{
+				else if (){
 						return "MUI";
 				}
+				return "NO";
 		}
 
 	 //Add Here 2019.04.17
