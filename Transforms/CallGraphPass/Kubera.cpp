@@ -26,6 +26,11 @@
 
 using namespace llvm;
 using namespace std;
+// To do List 2021.05.27
+// Forward 분석 1단계만 되게 하기 - Forward, Function Pass로 바꾸기
+// Backward로 타고 타고 JNI 진입 함수까지 분석하게 하기 - 이건 그냥 모듈 pass로
+//
+
 
 
 // Refer this web site: https://cpp.hotexamples.com/examples/-/CallGraphSCCPass/-/cpp-callgraphsccpass-class-examples.html
@@ -33,6 +38,15 @@ namespace{
 	cl::opt<int> lineNumber("num", cl::desc("Please enter crash line number"), cl::init(0));
 	static cl::opt<std::string> functionName("mapping-functio", cl::desc("The function name to be mapped"), cl::init(""));
 
+	bool isRUICall(std::string funcName){
+		// 함수 리스트 만들기
+		// for only test;
+
+		return false;
+	}
+	enum MF_TAG {
+		RUI, NOT, MUI
+	};
 
 	struct Forward : public ModulePass {
 			static char ID;     // Pass identification
@@ -532,6 +546,9 @@ namespace{
 		map<BasicBlock*, set<pair<Instruction *, string>>&> DEF;
 		map<BasicBlock*, set<pair<Instruction *, string>>&> IN;
 		map<BasicBlock*, set<pair<Instruction *, string>>&> OUT;
+		map<Function*, int> functionDepth;
+
+		vector<Function*> workList;
 
 		Function* holeFunc;
 
@@ -570,8 +587,15 @@ namespace{
 				return false;
 			}
 			runOnFunction(*holeFunc);
+			for (vector<Function*>::iterator iter = workList.begin(); iter !=workList.end(); iter++ ) {
+				Function* func = *iter;
+				runOnFunction(*func);
+			}
 			return false;
 		};
+		bool runOnFunc(Function& f){
+			errs() << "func : " << f.getName() << "\n";
+		}
 
 		bool runOnFunction(Function& f){
 			for (Function::iterator bb = f.begin(); bb != f.end(); bb++) {
@@ -591,8 +615,17 @@ namespace{
 			}
 
 			printTable(btd_table);
+
+			// 결과 받는 분석하기
 			errs() << "\n\n";
 			errs() << "*********       end of the result       *********\n";
+
+			for( Value::user_iterator ui = f.user_begin(); ui != f.user_end() ; ui++){
+					if(CallInst* ci = dyn_cast<CallInst>(*ui)){
+							if( functionDepth.count(ci->getParent()->getParent()) > 0)	continue;
+							workList.push_back(ci->getParent()->getParent());
+					}
+			}
 		}
 
 		bool runOnBasicBlock(BasicBlock& b){
@@ -684,12 +717,22 @@ namespace{
 
 						//ADD HERE RETE 2019.04.18
 						if(isa<CallInst>(&bbInst)){
+							//Call Value 이름 바꾸기
 								CallInst *cl = cast<CallInst>(inst);
+
 								string calledFunctionName = cl->getCalledFunction()->getName();
 								errs() << "\n\n Check Called Function : " << cl->getCalledFunction()->getName() << "\n\n";
-								errs() << "ADDRESS : " << &bbInst << "\n";
+
+								// if(isRUICall(calledFunctionName)) {
+								// 	cl->setName();
+								// }
+								cl->print(errs());
+								errs() << "\n";
 								for(int i = 0 ; i < cl->arg_size() ; i++){
+									errs() <<"ARG: ";
 									Value* arg = cl->getArgOperand(i);
+									arg->print(errs());
+									errs() <<"\n";
 									if( Constant* c_arg = dyn_cast<Constant>(arg)) continue;
 									if( arg->getName() == "") continue;
 									bbUSE.insert(pair<Instruction*, string>(&bbInst, arg->getName()));
@@ -881,6 +924,9 @@ namespace{
 				return check;
 		}
 
+		private:  MF_TAG getResult() {
+
+		}
 		private:  void printTable(map<pair<Instruction *, string>, Instruction *> table){
 				errs() << "\n\n\n";
 				errs() << "######################### Backward Taint Analysis Table Data #########################" << "\n";
@@ -908,22 +954,11 @@ namespace{
 
 						analysisResult = outputAnaly(temp, defLine);
 
-						// if(analysisResult == "MAYBE"){ //<<useLine, DefLine>, <Use var, Result>>
-						// 		analysisResultTable.insert(pair<pair<unsigned, unsigned>, pair<string, string>>(pair<unsigned, unsigned>(useLine, defLine), pair<string, string>((iter->first).second, analysisResult)));
-						// 		analysisResult = maybeReAnalysis(useLine, (iter->first).second);
-						// }
-
 						string test = (iter->second)->getOperand(0)->getName();
 
 						if(test == ""){
 								test = (iter->second)->getOperand(1)->getName();
 						}
-
-
-
-//            analysisResultTable.insert(pair<pair<unsigned, unsigned>, pair<string, string>>(pair<unsigned, unsigned>(useLine, defLine), pair<string, string>((iter->first).second, analysisResult)));
-
-//            analysisResultTable.insert();
 
 						errs() << "<<USE line "<< useLine << " : " << (iter->first).first << ", " << (iter->first).second << ">, DEF line "<< defLine << " : " << iter->second << ">  , <DEF var> : " << test<< "===>" << analysisResult <<"\n\n";
 						if(analysisResult == "MAYBE"){ //<<useLine, DefLine>, <Use var, Result>>
@@ -951,9 +986,9 @@ namespace{
 				else if(!findTable(defLine)){
 						return "NO";
 				}
-				else if (){
-						return "MUI";
-				}
+				// else if (val.find("")){
+				// 		return "MUI";
+				// }
 				return "NO";
 		}
 
@@ -1026,12 +1061,6 @@ namespace{
 								ul = getDebugLocLine(getMaybeValDEFAddr(predUl, useVal)); //==>3
 								asd = getMaybeValUSEAddr(ul, useVal); //==>3
 						}
-
-
-
-//            }
-
-
 						check++;
 				}
 
