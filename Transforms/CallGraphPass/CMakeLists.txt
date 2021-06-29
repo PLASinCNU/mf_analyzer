@@ -2,5 +2,5 @@
 # from the hello plugin.
 
 add_library( LLVMKubera  MODULE
-	Kubera.cpp
+	mf.cpp
 )
